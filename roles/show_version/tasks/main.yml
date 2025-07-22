@@ -1,0 +1,44 @@
+---
+- name: SSH and run show version via expect
+  ansible.builtin.expect:
+    command: ssh {{ ansible_user }}@{{ inventory_hostname }}
+    responses:
+      (?i)password: "{{ ansible_ssh_pass }}"
+      "\\$": "cli\n"
+      ">": "set cli screen-length 0\nshow version\nexit\n"
+    timeout: "{{ ssh_timeout }}"
+  register: show_output
+  delegate_to: localhost
+
+- name: Extract version lines
+  set_fact:
+    version_output: >-
+      {{
+        show_output.stdout_lines[
+          show_output.stdout_lines.index('localre:') :
+          show_output.stdout_lines.index('{master:0}', show_output.stdout_lines.index('localre:'))
+        ]
+      }}
+
+- name: Parse key fields
+  set_fact:
+    hostname: "{{ version_output | select('match', '^Hostname:') | first | regex_replace('^Hostname: ', '') }}"
+    model: "{{ version_output | select('match', '^Model:') | first | regex_replace('^Model: ', '') }}"
+    junos_version: "{{ version_output | select('match', '^Junos:') | first | regex_replace('^Junos: ', '') }}"
+
+- name: Ensure output directory exists
+  file:
+    path: "{{ playbook_dir }}/../output"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+
+- name: Save version output using template
+  template:
+    src: qfx_output.j2
+    dest: "{{ playbook_dir }}/../output/qfx_version_{{ inventory_hostname }}.txt"
+  delegate_to: localhost
+
+- name: DEBUG expect output
+  debug:
+    var: show_output

@@ -1,0 +1,8 @@
+Hostname: {{ hostname }}
+Model: {{ model }}
+Junos Version: {{ junos_version }}
+
+Full Version Output:
+{% for line in version_output %}
+{{ line }}
+{% endfor %}

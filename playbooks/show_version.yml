@@ -1,0 +1,8 @@
+---
+- name: Collect and format QFX version info
+  hosts: qfx
+  gather_facts: no
+  vars_files:
+    - ../vars/qfx.yml
+  roles:
+    - show_version
